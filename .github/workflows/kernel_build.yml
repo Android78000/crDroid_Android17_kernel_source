@@ -1,0 +1,53 @@
+name: Compile Whyred Kernel (Android 17)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    # Yahan Docker container load kar rahe hain jo Ubuntu 20.04 ka environment dega
+    container:
+      image: ubuntu:20.04
+
+    steps:
+      - name: Checkout Kernel Source
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Build Environment Inside Container
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          # Docker ke andar tools aur cross-compiler install kar rahe hain
+          apt-get update && apt-get install -y \
+            git make bc bison flex libssl-dev libelf-dev build-essential \
+            gcc-aarch64-linux-gnu g++-aarch64-linux-gnu sudo
+
+      - name: Set Environment Variables
+        run: |
+          echo "ARCH=arm64" >> $GITHUB_ENV
+          echo "SUBARCH=arm64" >> $GITHUB_ENV
+          echo "CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
+
+      - name: Build Defconfig & Kernel
+        run: |
+          mkdir -p out
+          echo "Listing vendor configs:"
+          ls -la arch/arm64/configs/vendor/ || true
+          ls -la arch/arm64/configs/vendor/xiaomi/ || true
+          
+          # Defconfig generate karenge
+          make O=out sdm660_defconfig || make O=out vendor/xiaomi/sdm660_defconfig
+          
+          # Kernel bina kisi warning/error ke smoothly compile hoga
+          make O=out -j$(nproc)
+          
+      - name: Upload Kernel Image
+        uses: actions/upload-artifact@v4
+        with:
+          name: Whyred-Kernel-Image
+          path: out/arch/arm64/boot/Image.gz-dtb
+          
