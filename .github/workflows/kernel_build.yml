@@ -25,7 +25,7 @@ jobs:
           echo "SUBARCH=arm64" >> $GITHUB_ENV
           echo "CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
 
-        - name: Build Defconfig & Kernel
+      - name: Build Defconfig & Kernel
         run: |
           mkdir -p out
           echo "Listing vendor configs:"
