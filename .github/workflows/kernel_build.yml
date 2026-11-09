@@ -28,7 +28,7 @@ jobs:
 
       - name: Build Defconfig & Kernel
         run: |
-          mkdir -p `out`
+          mkdir -p out
           make O=out whyred_defconfig
           make O=out -j$(nproc)
 
