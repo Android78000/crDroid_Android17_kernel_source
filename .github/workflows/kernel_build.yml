@@ -25,14 +25,17 @@ jobs:
           echo "SUBARCH=arm64" >> $GITHUB_ENV
           echo "CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
 
-      - name: Build Defconfig & Kernel
+        - name: Build Defconfig & Kernel
         run: |
           mkdir -p out
-          # Base sdm660 defconfig load karo aur whyred fragment merge karo
-          make O=out sdm660-perf_defconfig
-          ./scripts/kconfig/merge_config.sh -O out out/.config arch/arm64/configs/vendor/xiaomi/whyred.config
-          make O=out olddefconfig
+          echo "Listing vendor configs:"
+          ls -la arch/arm64/configs/vendor/
+          ls -la arch/arm64/configs/vendor/xiaomi/
+          
+          # Jo exact path ya config milegi, usse build karenge
+          make O=out sdm660_defconfig || make O=out vendor/xiaomi/sdm660_defconfig
           make O=out -j$(nproc)
+          
 
       - name: Upload Kernel Image
         uses: actions/upload-artifact@v4
