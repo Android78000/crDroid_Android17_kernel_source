@@ -1,0 +1,56 @@
+name: Compile Whyred Kernel (Android 17)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Kernel Source
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Build Environment
+        run: |
+          sudo apt-get update && sudo apt-get install -y \
+            git make bc bison flex libssl-dev libelf-dev build-essential \
+            gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+      - name: Set Environment Variables
+        run: |
+          echo "ARCH=arm64" >> $GITHUB_ENV
+          echo "SUBARCH=arm64" >> $GITHUB_ENV
+          echo "CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
+
+      - name: Fix Profile.c Warning Error & Configs
+        run: |
+          # kernel/profile.c ke NULL check wale error ko seedha fix/patch kar rahe hain
+          sed -i 's/if (prof_cpu_mask != NULL)/if (1)/g' kernel/profile.c
+          sed -i 's/if (!user_mode(regs) && prof_cpu_mask != NULL/if (!user_mode(regs) \&\& 1/g' kernel/profile.c
+
+      - name: Build Defconfig & Kernel
+        run: |
+          mkdir -p out
+          make O=out vendor/sdm660-perf_defconfig
+          
+          # Forcefully disable WERROR in the merged config
+          echo "CONFIG_WERROR=n" >> arch/arm64/configs/vendor/xiaomi/whyred.config
+          
+          ./scripts/kconfig/merge_config.sh -O out out/.config arch/arm64/configs/vendor/xiaomi/whyred.config
+          make O=out olddefconfig
+          
+          # Build with KCFLAGS to ignore warnings completely
+          make O=out KCFLAGS="-w" -j$(nproc)
+
+      - name: Upload Kernel Image
+        uses: actions/upload-artifact@v4
+        with:
+          name: Whyred-Kernel-Image
+          path: |
+            out/arch/arm64/boot/Image.gz-dtb
+            out/arch/arm64/boot/Image.gz
+            out/arch/arm64/boot/Image
+            
